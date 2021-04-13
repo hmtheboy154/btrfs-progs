@@ -317,7 +317,7 @@ csum:
 found:
 	btrfs_csum_data(csum_type, (u8 *)data, csum_result, len);
 	/* FIXME: does not make sense for non-crc32c */
-	if (csum_result == 0) {
+	if (!csum_result[0]) {
 		printk("csum result is 0 for block %llu\n",
 		       (unsigned long long)bytenr);
 	}
