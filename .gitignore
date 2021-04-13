@@ -55,7 +55,6 @@
 /autom4te.cache
 /config.cache
 /config/*
-/config.h
 /config.h.in
 /config.h.in~
 /config.log
