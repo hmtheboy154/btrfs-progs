@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+
+#include "androidcompat.h"
 #include "common/task-utils.h"
 
 struct task_info *task_init(void *(*threadfn)(void *), int (*postfn)(void *),

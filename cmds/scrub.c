@@ -17,7 +17,6 @@
  */
 
 #include "kerncompat.h"
-#include "androidcompat.h"
 
 #include <sys/ioctl.h>
 #include <sys/wait.h>
@@ -44,6 +43,7 @@
 #include <syscall.h>
 #include <time.h>
 #include <uuid/uuid.h>
+#include "androidcompat.h"
 #include "kernel-lib/sizes.h"
 #include "kernel-shared/volumes.h"
 #include "common/defs.h"
@@ -1673,7 +1673,11 @@ static int scrub_start(const struct cmd_struct *cmd, int argc, char **argv,
 	}
 
 	/* check for errors returned from the progress thread itself */
-	if (do_print && terr && terr != PTHREAD_CANCELED) {
+	if (do_print && terr
+#ifndef __ANDROID__
+		 && terr != PTHREAD_CANCELED
+#endif
+		) {
 		errno = -PTR_ERR(terr);
 		error("recording progress failed: %m");
 	}

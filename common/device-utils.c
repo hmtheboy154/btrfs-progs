@@ -31,6 +31,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <blkid/blkid.h>
+#include "androidcompat.h"
 #include "kernel-lib/sizes.h"
 #include "kernel-shared/disk-io.h"
 #include "kernel-shared/ctree.h"
@@ -149,6 +150,9 @@ static int zero_dev_clamped(int fd, struct btrfs_zoned_device_info *zinfo,
  */
 static int btrfs_wipe_existing_sb(int fd, struct btrfs_zoned_device_info *zinfo)
 {
+#ifdef __ANDROID__
+	return 0;
+#else
 	const char *off = NULL;
 	size_t len = 0;
 	loff_t offset;
@@ -210,6 +214,7 @@ static int btrfs_wipe_existing_sb(int fd, struct btrfs_zoned_device_info *zinfo)
 out:
 	blkid_free_probe(pr);
 	return ret;
+#endif
 }
 
 /*

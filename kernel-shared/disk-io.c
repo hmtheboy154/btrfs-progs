@@ -252,6 +252,14 @@ struct extent_buffer* btrfs_find_create_tree_block(
 	return alloc_extent_buffer(fs_info, bytenr, fs_info->nodesize);
 }
 
+#ifdef __ANDROID__
+#include <sys/syscall.h>
+static inline ssize_t readahead(int fd, off_t offset, size_t count)
+{
+	return syscall(__NR_readahead, fd, offset, count);
+}
+#endif
+
 void readahead_tree_block(struct btrfs_fs_info *fs_info, u64 bytenr,
 		u64 parent_transid)
 {
