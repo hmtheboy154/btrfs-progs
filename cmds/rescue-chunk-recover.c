@@ -17,6 +17,7 @@
  */
 
 #include "kerncompat.h"
+#include "androidcompat.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

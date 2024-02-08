@@ -17,6 +17,8 @@
  */
 
 #include "kerncompat.h"
+#include "androidcompat.h"
+
 #include <sys/stat.h>
 #include <sys/xattr.h>
 #include <dirent.h>
@@ -163,7 +165,7 @@ static int fill_inode_item(struct btrfs_trans_handle *trans,
 	return 0;
 }
 
-static int directory_select(const struct dirent *entry)
+static int directory_select(const struct direct *entry)
 {
 	if (entry->d_name[0] == '.' &&
 		(entry->d_name[1] == 0 ||
@@ -172,7 +174,7 @@ static int directory_select(const struct dirent *entry)
 	return 1;
 }
 
-static void free_namelist(struct dirent **files, int count)
+static void free_namelist(struct direct **files, int count)
 {
 	int i;
 
@@ -187,7 +189,7 @@ static void free_namelist(struct dirent **files, int count)
 static u64 calculate_dir_inode_size(const char *dirname)
 {
 	int count, i;
-	struct dirent **files, *cur_file;
+	struct direct **files, *cur_file;
 	u64 dir_inode_size = 0;
 
 	count = scandir(dirname, &files, directory_select, NULL);
@@ -499,10 +501,10 @@ static int traverse_directory(struct btrfs_trans_handle *trans,
 
 	struct btrfs_inode_item cur_inode;
 	int count, i, dir_index_cnt;
-	struct dirent **files;
+	struct direct **files;
 	struct stat st;
 	struct directory_name_entry *dir_entry, *parent_dir_entry;
-	struct dirent *cur_file;
+	struct direct *cur_file;
 	ino_t parent_inum, cur_inum;
 	ino_t highest_inum = 0;
 	const char *parent_dir_name;
