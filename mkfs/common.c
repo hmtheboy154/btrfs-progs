@@ -987,6 +987,9 @@ out:
  */
 static int check_overwrite(const char *device)
 {
+#ifdef __ANDROID__
+	return 0;
+#else	
 	const char	*type;
 	blkid_probe	pr = NULL;
 	int		ret;
@@ -1063,6 +1066,7 @@ out:
 	}
 
 	return ret;
+#endif
 }
 
 /*
