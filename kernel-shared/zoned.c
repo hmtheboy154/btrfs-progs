@@ -62,6 +62,9 @@ static int btrfs_get_dev_zone_info(struct btrfs_device *device);
 
 enum btrfs_zoned_model zoned_model(const char *file)
 {
+#ifdef __ANDROID__
+	return ZONED_NONE;
+#else
 	const char host_aware[] = "host-aware";
 	const char host_managed[] = "host-managed";
 	struct stat st;
@@ -88,10 +91,14 @@ enum btrfs_zoned_model zoned_model(const char *file)
 		return ZONED_HOST_MANAGED;
 
 	return ZONED_NONE;
+#endif
 }
 
 u64 zone_size(const char *file)
 {
+#ifdef __ANDROID__
+	return 0;
+#else
 	char chunk[32];
 	int ret;
 
@@ -118,10 +125,14 @@ u64 zone_size(const char *file)
 		return 0;
 
 	return strtoull((const char *)chunk, NULL, 10) << SECTOR_SHIFT;
+#endif
 }
 
 static u64 max_zone_append_size(const char *file)
 {
+#ifdef __ANDROID__
+	return 0;
+#else
 	char chunk[32];
 	int ret;
 
@@ -131,6 +142,7 @@ static u64 max_zone_append_size(const char *file)
 		return 0;
 
 	return strtoull((const char *)chunk, NULL, 10);
+#endif
 }
 
 #ifdef BTRFS_ZONED

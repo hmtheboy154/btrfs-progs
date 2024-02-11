@@ -387,7 +387,11 @@ void fmt_print(struct format_ctx *fctx, const char* key, ...)
 		const int level = va_arg(args, int);
 		const u64 id = va_arg(args, u64);
 
+#ifndef __ANDROID__
 		printf("%hu/%llu", level, id);
+#else
+		printf("%du/%llu", level, id);
+#endif
 	} else if (strcmp(row->fmt, "size-or-none") == 0) {
 		const u64 size = va_arg(args, u64);
 		const unsigned int unit_mode = va_arg(args, unsigned int);

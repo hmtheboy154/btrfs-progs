@@ -63,6 +63,9 @@ static int discard_range(int fd, u64 start, u64 len)
 
 static int discard_supported(const char *device)
 {
+#ifdef __ANDROID__
+	return 1;
+#else
 	int ret;
 	char buf[128] = {};
 
@@ -78,6 +81,7 @@ static int discard_supported(const char *device)
 	}
 
 	return 1;
+#endif
 }
 
 /*
@@ -523,6 +527,7 @@ out:
 
 int device_get_rotational(const char *file)
 {
+#ifndef __ANDROID__
 	char rotational;
 	int ret;
 
@@ -531,6 +536,14 @@ int device_get_rotational(const char *file)
 		return 0;
 
 	return (rotational == '0');
+#else
+	char *isrot = getenv("BTRFS_IS_ROTATIONAL");
+	if (isrot == "1") {
+		return 0;
+	} else {
+		return 1;
+	}
+#endif
 }
 
 int device_get_info(int fd, u64 devid, struct btrfs_ioctl_dev_info_args *di_args)

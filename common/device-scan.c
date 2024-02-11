@@ -109,7 +109,11 @@ int test_uuid_unique(const char *uuid_str)
 	}
 	blkid_probe_all(cache);
 	iter = blkid_dev_iterate_begin(cache);
+#ifndef __ANDROID__
 	blkid_dev_set_search(iter, "UUID", uuid_str);
+#else
+	blkid_dev_set_search(iter, "UUID", (char*)uuid_str);
+#endif
 
 	while (blkid_dev_next(iter, &dev) == 0) {
 		dev = blkid_verify(cache, dev);

@@ -19,6 +19,9 @@ typedef struct blkid_struct_probe *blkid_probe;
 #include <dirent.h>
 #define direct dirent
 
+#include <libgen.h>
+#include <config.h>
+
 #else	/* !ANDROID */
 
 #include <sys/dir.h>

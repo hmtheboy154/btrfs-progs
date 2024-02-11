@@ -5,6 +5,7 @@ LOCAL_PATH:= $(call my-dir)
 CFLAGS := -g -O1 -Wall -D_FORTIFY_SOURCE=2 -include config.h \
 	-DBTRFS_FLAT_INCLUDES -D_XOPEN_SOURCE=700 -fno-strict-aliasing -fPIC \
 	-DCOMPRESSION_LZO=1 -DCOMPRESSION_ZSTD=1 -DCRYPTOPROVIDER_BUILTIN=1 \
+	-Wno-unused-function -Wno-typedef-redefinition \
 	-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare -Wno-pointer-arith
 
 LDFLAGS := -static -rdynamic
@@ -17,11 +18,11 @@ STATIC_LDFLAGS := -static -Wl,--gc-sections
 STATIC_LIBS := -luuid   -lblkid -luuid -lz   -llzo2 -L. -pthread -lzstd
 
 btrfs_shared_libraries := libext2_uuid libext2_blkid
-btrfs_static_libraries := libext2_uuid_static libext2_blkid
+btrfs_static_libraries := libext2_uuid libext2_blkid
 
 CRYPTO_OBJECTS = crypto/sha224-256.c crypto/blake2b-ref.c crypto/blake2b-sse2.c \
 		 crypto/blake2b-sse41.c crypto/blake2b-avx2.c crypto/sha256-x86.c \
-		 crypto/crc32c-pcl-intel-asm_64.c
+		 crypto/crc32c-pcl-intel-asm_64.S
 
 objects = \
 	kernel-lib/list_sort.c	\
@@ -124,20 +125,20 @@ tune_objects = tune/main.c tune/seeding.c tune/change-uuid.c tune/change-metadat
 	       tune/convert-bgt.c tune/change-csum.c common/clear-cache.c tune/quota.c
 
 # external/e2fsprogs/lib is needed for uuid/uuid.h
-common_C_INCLUDES := external/e2fsprogs/lib/ external/lzo/include/ external/zlib/ external/zstd/lib
+common_C_INCLUDES := external/e2fsprogs/lib/ external/zlib/ external/zstd/lib
 
 #----------------------------------------------------------
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(libbtrfs_objects)
 LOCAL_CFLAGS := $(STATIC_CFLAGS)
 LOCAL_MODULE := libbtrfs
-LOCAL_C_INCLUDES := $(common_C_INCLUDES)
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
 intermediates := $(call local-generated-sources-dir)
 
-BTRFS_PROGS_OPTS := --disable-libudev --disable-python --enable-year2038
+BTRFS_PROGS_OPTS := --disable-libudev --disable-python --disable-zoned
 CONFIG_STATUS := $(intermediates)/config.status
-$(CONFIG_STATUS): $(LOCAL_PATH)/configure
+$(CONFIG_STATUS): $(LOCAL_PATH)/autogen.sh
 	@rm -rf $(@D); mkdir -p $(@D)
 	export PATH=/usr/bin:/bin:$$PATH; \
 	for f in $(<D)/*; do if [ -d $$f ]; then \
@@ -146,14 +147,16 @@ $(CONFIG_STATUS): $(LOCAL_PATH)/configure
 		ln -sf `realpath --relative-to=$(@D) $$f` $(@D); \
 	fi; done;
 	export PATH=/usr/bin:/bin:$$PATH; \
-	$(LOCAL_PATH)/autogen.sh \
-	cd $(@D); ./$(<F) $(CONFIG_OPTS) && \
-	./$(<F) $(BTRFS_PROGS_OPTS) --prefix=/system || \
+	cd $(@D); ./$(<F) && \
+	./configure $(BTRFS_PROGS_OPTS) && \
+	./configure $(BTRFS_PROGS_OPTS) --prefix=/system || \
 		(rm -rf $(@F); exit 1)
 
-LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_C_INCLUDES) $(intermediates) \
+LOCAL_GENERATED_SOURCES := $(CONFIG_STATUS)
+LOCAL_C_INCLUDES := $(common_C_INCLUDES) $(intermediates) \
 					$(intermediates)/kernel-lib $(intermediates)/libbtrfsutil \
 					$(intermediates)/include $(intermediates)/libbtrfs
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_C_INCLUDES)
 include $(BUILD_STATIC_LIBRARY)
 
 #----------------------------------------------------------
@@ -161,7 +164,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(libbtrfsutil_objects)
 LOCAL_CFLAGS := $(STATIC_CFLAGS)
 LOCAL_MODULE := libbtrfsutil
-LOCAL_C_INCLUDES := $(common_C_INCLUDES)
+LOCAL_STATIC_LIBRARIES := libbtrfs
 include $(BUILD_STATIC_LIBRARY)
 
 #----------------------------------------------------------
@@ -173,7 +176,6 @@ LOCAL_SRC_FILES := \
 		$(cmds_objects) \
 		btrfs.c
 
-LOCAL_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_CFLAGS := $(STATIC_CFLAGS)
 #LOCAL_LDLIBS := $(LIBBTRFS_LIBS)
 #LOCAL_LDFLAGS := $(STATIC_LDFLAGS)
@@ -181,6 +183,7 @@ LOCAL_POST_INSTALL_CMD := ln -sf btrfs $(TARGET_OUT)/bin/fsck.btrfs
 LOCAL_POST_INSTALL_CMD += ln -sf btrfs $(TARGET_OUT)/bin/btrfsck
 LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 LOCAL_STATIC_LIBRARIES := libbtrfs libbtrfsutil liblzo-static libz libzstd
+LOCAL_HEADER_LIBRARIES := liblzo-headers
 LOCAL_SYSTEM_SHARED_LIBRARIES := libc libcutils
 
 LOCAL_EXPORT_C_INCLUDES := $(common_C_INCLUDES)
@@ -195,12 +198,12 @@ LOCAL_SRC_FILES := \
                 $(objects) \
                 $(mkfs_objects)
 
-LOCAL_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_CFLAGS := $(STATIC_CFLAGS)
 #LOCAL_LDLIBS := $(LIBBTRFS_LIBS)
 #LOCAL_LDFLAGS := $(STATIC_LDFLAGS)
 LOCAL_STATIC_LIBRARIES := libbtrfs liblzo-static libzstd libbtrfsutil $(btrfs_static_libraries)
 LOCAL_SYSTEM_SHARED_LIBRARIES := libc libcutils
+LOCAL_HEADER_LIBRARIES := liblzo-headers
 
 LOCAL_EXPORT_C_INCLUDES := $(common_C_INCLUDES)
 #LOCAL_MODULE_TAGS := optional
@@ -213,7 +216,6 @@ LOCAL_SRC_FILES := \
                 $(objects) \
                 $(tune_objects)
 
-LOCAL_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_CFLAGS := $(STATIC_CFLAGS)
 LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 #LOCAL_LDLIBS := $(LIBBTRFS_LIBS)
@@ -221,6 +223,7 @@ LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 LOCAL_STATIC_LIBRARIES := libbtrfs liblzo-static libzstd libbtrfsutil
 LOCAL_SYSTEM_SHARED_LIBRARIES := libc libcutils
+LOCAL_HEADER_LIBRARIES := liblzo-headers
 
 LOCAL_EXPORT_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_MODULE_TAGS := optional
@@ -234,7 +237,6 @@ LOCAL_SRC_FILES := \
                 $(objects) \
 				$(convert_objects)
 
-LOCAL_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_CFLAGS := $(STATIC_CFLAGS)
 LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 #LOCAL_LDLIBS := $(LIBBTRFS_LIBS)
@@ -242,6 +244,7 @@ LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 LOCAL_STATIC_LIBRARIES := libbtrfs liblzo-static libzstd libbtrfsutil
 LOCAL_SYSTEM_SHARED_LIBRARIES := libc libcutils
+LOCAL_HEADER_LIBRARIES := liblzo-headers
 
 LOCAL_EXPORT_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_MODULE_TAGS := optional
@@ -255,7 +258,6 @@ LOCAL_SRC_FILES := \
                 $(objects) \
 				$(image_objects)
 
-LOCAL_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_CFLAGS := $(STATIC_CFLAGS)
 LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 #LOCAL_LDLIBS := $(LIBBTRFS_LIBS)
@@ -263,6 +265,7 @@ LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 LOCAL_SHARED_LIBRARIES := $(btrfs_shared_libraries)
 LOCAL_STATIC_LIBRARIES := libbtrfs liblzo-static libzstd libbtrfsutil
 LOCAL_SYSTEM_SHARED_LIBRARIES := libc libcutils
+LOCAL_HEADER_LIBRARIES := liblzo-headers
 
 LOCAL_EXPORT_C_INCLUDES := $(common_C_INCLUDES)
 LOCAL_MODULE_TAGS := optional
